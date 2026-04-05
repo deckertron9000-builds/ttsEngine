@@ -26,9 +26,8 @@ jobs:
       - name: Sign APK
         env:
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           APK_NAME: ${{ vars.APK_NAME }}
         run: |
           echo "$SIGNING_KEYSTORE_B64" | base64 --decode > /tmp/release.jks
@@ -39,9 +38,9 @@ jobs:
 
           "$APKSIGNER" sign \
             --ks /tmp/release.jks \
-            --ks-pass "pass:$SIGNING_STORE_PASSWORD" \
+            --ks-pass "pass:$SIGNING_PASSWORD" \
             --ks-key-alias "$SIGNING_KEY_ALIAS" \
-            --key-pass "pass:$SIGNING_KEY_PASSWORD" \
+            --key-pass "pass:$SIGNING_PASSWORD" \
             "$APK"
 
           rm /tmp/release.jks
