@@ -2,26 +2,26 @@ name: Build and Sign APK
 
 on:
   push:
-    branches: [master]    # trigger on every push to master
-  workflow_dispatch:       # allow manual trigger from Actions tab
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04   # pinned — avoids surprises when GitHub bumps 'latest'
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5   # checks out your fork
+        uses: actions/checkout@v5
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          java-version: '21'         # current LTS, fully supported by AGP 8.x/9.x
+          java-version: '21'
           distribution: 'temurin'
-          cache: gradle              # cache gradle deps between runs
+          cache: gradle
 
       - name: Build unsigned release APK
-        run: ./gradlew assembleRelease   # produces app-release-unsigned.apk
+        run: ./gradlew assembleRelease
 
       - name: Sign APK
         env:
@@ -31,15 +31,12 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           APK_NAME: ${{ vars.APK_NAME }}
         run: |
-          # decode keystore from base64 secret into a temp file
           echo "$SIGNING_KEYSTORE_B64" | base64 --decode > /tmp/release.jks
 
-          # use build-tools 34 — newer versions produce APKs incompatible with apksigcopier
-          APKSIGNER="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name "apksigner" | sort -V | tail -1)
 
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
 
-          # sign in-place — no unsigned and signed APK coexisting on the runner
           "$APKSIGNER" sign \
             --ks /tmp/release.jks \
             --ks-pass "pass:$SIGNING_STORE_PASSWORD" \
@@ -47,26 +44,23 @@ jobs:
             --key-pass "pass:$SIGNING_KEY_PASSWORD" \
             "$APK"
 
-          # clean up keystore immediately after use
           rm /tmp/release.jks
 
-          # rename for clarity in the release assets
-          # APK_NAME is a repository variable: Settings -> Secrets and variables -> Actions -> Variables
           mv "$APK" "$APK_NAME"
 
       - name: Get version info for release tag
         id: version
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)   # e.g. f174246
-          DATE=$(date -u '+%Y%m%d')                 # e.g. 20260405
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u '+%Y%m%d')
           echo "tag=build-${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "name=Build ${DATE} (${SHORT_SHA})" >> $GITHUB_OUTPUT
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}    # unique per build, sorts correctly
+          tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.name }}
           body: "Auto-built and signed from master"
           files: ${{ vars.APK_NAME }}
-          make_latest: true                             # Obtainium will find this as latest
+          make_latest: true
