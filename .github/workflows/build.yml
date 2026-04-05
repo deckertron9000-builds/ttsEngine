@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4   # checks out your fork
+        uses: actions/checkout@v5   # checks out your fork
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'         # current LTS, fully supported by AGP 8.x/9.x
           distribution: 'temurin'
