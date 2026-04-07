@@ -33,13 +33,13 @@ jobs:
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          APK_NAME: ${{ vars.APK_NAME }}
         run: |
           echo "$SIGNING_KEYSTORE_B64" | base64 --decode > /tmp/release.jks
 
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name "apksigner" | sort -V | tail -1)
 
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          APK_NAME="${{ github.event.repository.name }}-signed.apk"
 
           "$APKSIGNER" sign \
             --ks /tmp/release.jks \
@@ -51,6 +51,8 @@ jobs:
           rm /tmp/release.jks
 
           mv "$APK" "$APK_NAME"
+          echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
+        id: sign
 
       - name: Get version info for release tag
         id: version
@@ -71,5 +73,5 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.name }}
           body: "Auto-built and signed from upstream tag ${{ steps.version.outputs.tag }}"
-          files: ${{ vars.APK_NAME }}
+          files: ${{ steps.sign.outputs.apk_name }}
           make_latest: true
